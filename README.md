@@ -143,6 +143,7 @@ Options 엔드포인트가 생성되는 이유는 클라이언트가 사전 요�
 <img src="img/image-13.png" />
 
 POST 메서드
+
 <img src="img/image-14.png" />
 
 <img src="img/image-15.png" />
@@ -173,6 +174,7 @@ POST 메서드
 <img src="img/image-20.png" />
 
 POST test
+
 ```
 {
   "title": "Web Component Fundamentals",
@@ -208,6 +210,7 @@ PUT 메서드
 ```
 
 PUT test
+
 ``` web-component-fundamentals ```
 ```
 {
@@ -244,6 +247,7 @@ OPTION을 비활성화 한다
 /courses과 /courses/{id}도 마찬가지 CORS 설정한다
 
 배포:
+
 <img src="img/image-29.png" />
 
 <img src="img/image-30.png" />
