@@ -1,0 +1,415 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Create an AWS Lambda function and related resources
+
+Resources:
+  # DynamoDB Table
+  CoursesTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: courses
+      AttributeDefinitions:
+        - AttributeName: 'id'
+          AttributeType: S
+      KeySchema:
+        - AttributeName: 'id'
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+  AuthorsTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: authors
+      AttributeDefinitions:
+        - AttributeName: 'id'
+          AttributeType: S
+      KeySchema:
+        - AttributeName: 'id'
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+  
+  # Lambda Functions
+  GetAllAuthorsLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: get-all-authors
+      Code:
+        ZipFile: !Sub |
+          const AWS = require("aws-sdk");
+          const dynamodb = new AWS.DynamoDB({
+            region: "ap-northeast-2",
+            apiVersion: "2012-08-10"
+          });
+
+          exports.handler = (event, context, callback) => {
+            const params = {
+              TableName: "authors"
+            };
+            dynamodb.scan(params, (err, data) => {
+              if (err) {
+                console.log(err);
+                callback(err);
+              } else {
+                const authors = data.Items.map(item => {
+                  return { id: item.id.S, firstName: item.firstName.S, lastName: item.lastName.S };
+                });
+                callback(null, authors);
+              }
+            });
+          };
+      Handler: index.handler
+      Role: !GetAtt GetAllAuthorsRole.Arn
+      Runtime: nodejs16.x
+      MemorySize: 3008
+
+  GetCourseLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: get-course
+      Code:
+        ZipFile: !Sub |
+          const AWS = require("aws-sdk");
+          const dynamodb = new AWS.DynamoDB({
+            region: "ap-northeast-2",
+            apiVersion: "2012-08-10"
+          });
+
+          exports.handler = (event, context, callback) => {
+            const params = {
+              Key: {
+                id: { S: event.id }
+              },
+              TableName: "courses"
+            };
+            dynamodb.getItem(params, (err, data) => {
+              if (err) {
+                console.log(err);
+                callback(err);
+              } else {
+                callback(null, {
+                  id: data.Item.id.S,
+                  title: data.Item.title.S,
+                  watchHref: data.Item.watchHref.S,
+                  authorId: data.Item.authorId.S,
+                  length: data.Item.length.S,
+                  category: data.Item.category.S
+                });
+              }
+            });
+          };
+      Handler: index.handler
+      Role: !GetAtt GetCourseRole.Arn
+      Runtime: nodejs16.x
+      MemorySize: 3008
+  
+  UpdateCourseLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: update-course
+      Code:
+        ZipFile: !Sub |
+          const AWS = require("aws-sdk");
+          
+          const dynamodb = new AWS.DynamoDB({
+            region: "ap-northeast-2",
+            apiVersion: "2012-08-10"
+          });
+
+          exports.handler = (event, context, callback) => {
+            const params = {
+              Item: {
+                id: { S: event.id },
+                title: { S: event.title },
+                watchHref: { S: event.watchHref },
+                authorId: { S: event.authorId },
+                length: { S: event.length },
+                category: { S: event.category }
+              },
+              TableName: "courses"
+            };
+            dynamodb.putItem(params, (err, data) => {
+              if (err) {
+                console.log(err);
+                callback(err);
+              } else {
+                callback(null, {
+                  id: params.Item.id.S,
+                  title: params.Item.title.S,
+                  watchHref: params.Item.watchHref.S,
+                  authorId: params.Item.authorId.S,
+                  length: params.Item.length.S,
+                  category: params.Item.category.S
+                });
+              }
+            });
+          };
+      Handler: index.handler
+      Role: !GetAtt UpdateCourseRole.Arn
+      Runtime: nodejs16.x
+      MemorySize: 3008
+    
+  GetAllCoursesLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: get-all-courses
+      Code:
+        ZipFile: !Sub |
+          const AWS = require("aws-sdk");
+          
+          const dynamodb = new AWS.DynamoDB({
+            region: "ap-northeast-2",
+            apiVersion: "2012-08-10"
+          });
+
+          exports.handler = (event, context, callback) => {
+            const params = {
+              TableName: "courses"
+            };
+            dynamodb.scan(params, (err, data) => {
+              if (err) {
+                console.log(err);
+                callback(err);
+              } else {
+                const courses = data.Items.map(item => {
+                  return {
+                    id: item.id.S,
+                    title: item.title.S,
+                    watchHref: item.watchHref.S,
+                    authorId: item.authorId.S,
+                    length: item.length.S,
+                    category: item.category.S
+                  };
+                });
+                callback(null, courses);
+              }
+            });
+          };
+      Handler: index.handler
+      Role: !GetAtt GetAllCoursesRole.Arn
+      Runtime: nodejs16.x
+      MemorySize: 3008
+
+  DeleteCourseLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: delete-course
+      Code:
+        ZipFile: !Sub |
+          const AWS = require("aws-sdk");
+          
+          const dynamodb = new AWS.DynamoDB({
+            region: "ap-northeast-2",
+            apiVersion: "2012-08-10"
+          });
+
+          exports.handler = (event, context, callback) => {
+            const params = {
+              TableName: "courses"
+            };
+            dynamodb.scan(params, (err, data) => {
+              if (err) {
+                console.log(err);
+                callback(err);
+              } else {
+                const courses = data.Items.map(item => {
+                  return {
+                    id: item.id.S,
+                    title: item.title.S,
+                    watchHref: item.watchHref.S,
+                    authorId: item.authorId.S,
+                    length: item.length.S,
+                    category: item.category.S
+                  };
+                });
+                callback(null, courses);
+              }
+            });
+          };
+      Handler: index.handler
+      Role: !GetAtt DeleteCourseRole.Arn
+      Runtime: nodejs16.x
+      MemorySize: 3008
+  
+  # Roles
+  GetAllAuthorsRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: get-all-authors-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:*
+                Resource: '*' 
+        - PolicyName: DynamoDBScanAuthorsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Scan
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/authors'
+    DependsOn:
+      - AuthorsTable
+  SaveCourseRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: save-course-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:*
+                Resource: '*' 
+        - PolicyName: DynamoDBPutItemCoursesAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/courses'
+    DependsOn:
+      - CoursesTable    
+  UpdateCourseRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: update-course-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:*
+                Resource: '*' 
+        - PolicyName: DynamoDBUpdateCourseAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/courses'
+    DependsOn:
+      - CoursesTable
+  GetCourseRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: get-course-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:*
+                Resource: '*' 
+        - PolicyName: DynamoDBGetItemCourseAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/courses'
+    DependsOn:
+      - CoursesTable 
+  GetAllCoursesRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: get-all-courses-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:*
+                Resource: '*' 
+        - PolicyName: DynamoDBScanCoursesAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Scan
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/courses'
+    DependsOn:
+      - CoursesTable
+  DeleteCourseRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: delete-course-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchFullAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:*
+                Resource: '*' 
+        - PolicyName: DynamoDBDeleteItemCourseAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DeleteItem
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/courses'
+    DependsOn:
+      - CoursesTable
